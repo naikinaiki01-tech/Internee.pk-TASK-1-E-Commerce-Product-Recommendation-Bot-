@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BazaarBot — Product Recommendation Chatbot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F2EFE4;
+    --paper-2:#EAE5D4;
+    --ink:#22262E;
+    --ink-light:#5B6270;
+    --line:#D8D0B8;
+    --tag-red:#B23A2E;
+    --mustard:#C98A2C;
+    --sage:#516B4F;
+    --sage-bg:#E4EADB;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper-2);
+    font-family:'Inter', sans-serif;
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+    padding:28px 16px;
+    min-height:100vh;
+  }
+  .app{
+    width:100%;
+    max-width:760px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:2px;
+    box-shadow:0 1px 0 var(--line);
+    display:flex;
+    flex-direction:column;
+    min-height:640px;
+  }
+  /* Ticket header */
+  .ticket-head{
+    padding:26px 28px 20px;
+    border-bottom:1px dashed var(--line);
+    position:relative;
+  }
+  .ticket-head::before, .ticket-head::after{
+    content:"";
+    position:absolute;
+    bottom:-9px;
+    width:18px;
+    height:18px;
+    background:var(--paper-2);
+    border-radius:50%;
+  }
+  .ticket-head::before{ left:-9px; }
+  .ticket-head::after{ right:-9px; }
+  .store-name{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:28px;
+    letter-spacing:0.2px;
+    margin:0;
+  }
+  .store-tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--ink-light);
+    margin-top:6px;
+  }
+  /* Chat area */
+  .chat{
+    flex:1;
+    padding:24px 28px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .row{ display:flex; }
+  .row.bot{ justify-content:flex-start; }
+  .row.user{ justify-content:flex-end; }
+  .bubble{
+    max-width:82%;
+    padding:12px 15px;
+    line-height:1.5;
+    font-size:14.5px;
+  }
+  .bubble.bot{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:3px 12px 12px 12px;
+  }
+  .bubble.user{
+    background:var(--ink);
+    color:var(--paper);
+    border-radius:12px 3px 12px 12px;
+  }
+  .chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:2px;
+  }
+  .chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    padding:7px 12px;
+    background:#fff;
+    border:1px solid var(--ink);
+    border-radius:20px;
+    cursor:pointer;
+    transition:background 0.15s, color 0.15s;
+  }
+  .chip:hover{ background:var(--ink); color:var(--paper); }
+  /* Product cards */
+  .results{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-top:4px;
+  }
+  @media (max-width:520px){ .results{ grid-template-columns:1fr; } }
+  .pcard{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:12px 13px 13px;
+    position:relative;
+    overflow:hidden;
+  }
+  .pcard::before{
+    content:"";
+    position:absolute;
+    top:0; left:0; right:0;
+    height:3px;
+    background:repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px);
+  }
+  .pcat{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--mustard);
+    margin-top:6px;
+  }
+  .pname{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:16px;
+    margin:4px 0 2px;
+  }
+  .pmeta{
+    font-size:12.5px;
+    color:var(--ink-light);
+    margin-bottom:8px;
+  }
+  .price-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:6px;
+  }
+  .price{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:15px;
+    color:var(--tag-red);
+  }
+  .stock{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    padding:2px 7px;
+    border-radius:20px;
+    background:var(--sage-bg);
+    color:var(--sage);
+  }
+  .buy-link{
+    display:block;
+    text-align:center;
+    margin-top:10px;
+    padding:8px 0;
+    background:var(--ink);
+    color:var(--paper);
+    text-decoration:none;
+    font-size:13px;
+    border-radius:2px;
+  }
+  .buy-link:hover{ background:var(--tag-red); }
+  .empty-note{
+    font-size:13.5px;
+    color:var(--ink-light);
+    font-style:italic;
+  }
+  /* Input bar */
+  .inputbar{
+    border-top:1px solid var(--line);
+    padding:14px 20px;
+    display:flex;
+    gap:10px;
+  }
+  .inputbar input{
+    flex:1;
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:10px 12px;
+    font-family:'Inter', sans-serif;
+    font-size:14px;
+    background:#fff;
+  }
+  .inputbar input:focus{ outline:2px solid var(--ink); outline-offset:-1px; }
+  .inputbar button{
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    padding:0 18px;
+    border-radius:2px;
+    cursor:pointer;
+    font-size:14px;
+  }
+  .inputbar button:hover{ background:var(--tag-red); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="ticket-head">
+    <p class="store-name">BazaarBot</p>
+    <p class="store-tag">recommendation counter · tell me what you're after</p>
+  </div>
+  <div class="chat" id="chat"></div>
+  <div class="inputbar">
+    <input id="textInput" type="text" placeholder="Type here, or use the buttons above…" autocomplete="off">
+    <button id="sendBtn">Send</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   1. INTENT DESIGN
+   ------------------------------------------------------------
+   The bot fills one "intent object" over the conversation:
+     intent = { category: string|null, minPrice: number, maxPrice: number }
+
+   Two slots are collected, in order:
+     - category  (Electronics / Fashion / Home & Kitchen / Books / Beauty / Any)
+     - price range (mapped to a min/max PKR bracket, or "Any")
+
+   Free-text typing is also understood via keyword matching
+   (synonyms below), so the user isn't forced to click buttons.
+   ============================================================ */
+
+const CATEGORY_SYNONYMS = {
+  "Electronics": ["electronics","gadget","gadgets","phone","laptop","earbuds","tech"],
+  "Fashion": ["fashion","clothes","clothing","shoes","wear","dress"],
+  "Home & Kitchen": ["home","kitchen","furniture","decor","appliance"],
+  "Books": ["books","book","novel","reading","stationery"],
+  "Beauty": ["beauty","skincare","makeup","cosmetics","perfume"]
+};
+
+const PRICE_BRACKETS = [
+  { label: "Under Rs 2,000",      min: 0,     max: 2000 },
+  { label: "Rs 2,000 – 5,000",    min: 2000,  max: 5000 },
+  { label: "Rs 5,000 – 15,000",   min: 5000,  max: 15000 },
+  { label: "Rs 15,000+",          min: 15000, max: Infinity },
+  { label: "Any price",           min: 0,     max: Infinity }
+];
+
+/* ============================================================
+   2. CATALOG / "API" LAYER
+   ------------------------------------------------------------
+   fetchCatalog() stands in for a real e-commerce API call.
+   It is written as an async function returning the same shape
+   a Shopify Storefront API response would give you, so wiring
+   in the real thing later is a drop-in swap — see the comment
+   block below the mock data for exactly what to change.
+   ============================================================ */
+
+const MOCK_CATALOG = [
+  { id:"e1", name:"Wireless Earbuds X2", category:"Electronics", price:3499,  stock:"In stock", url:"https://example-store.myshopify.com/products/wireless-earbuds-x2" },
+  { id:"e2", name:"27\" Curved Monitor",  category:"Electronics", price:34999, stock:"In stock", url:"https://example-store.myshopify.com/products/curved-monitor-27" },
+  { id:"e3", name:"Fast-Charge Power Bank 20K", category:"Electronics", price:2899, stock:"In stock", url:"https://example-store.myshopify.com/products/power-bank-20k" },
+  { id:"e4", name:"Mechanical Keyboard TKL", category:"Electronics", price:8750, stock:"Low stock", url:"https://example-store.myshopify.com/products/mech-keyboard-tkl" },
+  { id:"f1", name:"Cotton Kurta — Slate Blue", category:"Fashion", price:1899, stock:"In stock", url:"https://example-store.myshopify.com/products/kurta-slate-blue" },
+  { id:"f2", name:"Leather Chelsea Boots", category:"Fashion", price:6499, stock:"In stock", url:"https://example-store.myshopify.com/products/chelsea-boots" },
+  { id:"f3", name:"Everyday Canvas Tote", category:"Fashion", price:1450, stock:"In stock", url:"https://example-store.myshopify.com/products/canvas-tote" },
+  { id:"f4", name:"Winter Wool Shawl", category:"Fashion", price:3299, stock:"Low stock", url:"https://example-store.myshopify.com/products/wool-shawl" },
+  { id:"h1", name:"Ceramic Pour-Over Set", category:"Home & Kitchen", price:2750, stock:"In stock", url:"https://example-store.myshopify.com/products/pour-over-set" },
+  { id:"h2", name:"6-Seater Dining Table", category:"Home & Kitchen", price:42999, stock:"In stock", url:"https://example-store.myshopify.com/products/dining-table-6" },
+  { id:"h3", name:"Non-stick Cookware (5pc)", category:"Home & Kitchen", price:6999, stock:"In stock", url:"https://example-store.myshopify.com/products/cookware-5pc" },
+  { id:"h4", name:"Table Lamp — Warm Oak", category:"Home & Kitchen", price:1990, stock:"In stock", url:"https://example-store.myshopify.com/products/table-lamp-oak" },
+  { id:"b1", name:"Atomic Habits (Paperback)", category:"Books", price:1250, stock:"In stock", url:"https://example-store.myshopify.com/products/atomic-habits" },
+  { id:"b2", name:"A5 Dot-Grid Notebook Set", category:"Books", price:890,  stock:"In stock", url:"https://example-store.myshopify.com/products/dot-grid-notebook" },
+  { id:"b3", name:"Data Structures — Reference Edition", category:"Books", price:3200, stock:"Low stock", url:"https://example-store.myshopify.com/products/ds-reference" },
+  { id:"u1", name:"Vitamin-C Serum 30ml", category:"Beauty", price:1699, stock:"In stock", url:"https://example-store.myshopify.com/products/vitamin-c-serum" },
+  { id:"u2", name:"Matte Lipstick Trio", category:"Beauty", price:2350, stock:"In stock", url:"https://example-store.myshopify.com/products/lipstick-trio" },
+  { id:"u3", name:"Argan Hair Oil 100ml", category:"Beauty", price:1150, stock:"In stock", url:"https://example-store.myshopify.com/products/argan-hair-oil" }
+];
+
+async function fetchCatalog({ category, minPrice, maxPrice }) {
+  // ---- MOCK behaviour (used in this demo) ----
+  await new Promise(r => setTimeout(r, 350)); // simulate network latency
+  return MOCK_CATALOG.filter(p =>
+    (category === "Any" || !category || p.category === category) &&
+    p.price >= minPrice && p.price <= maxPrice
+  );
+
+  /* ---- REAL SHOPIFY STOREFRONT API (swap-in) ----
+  const query = `
+    query FilteredProducts($q: String!) {
+      products(first: 20, query: $q) {
+        edges { node {
+          id title
+          priceRange { minVariantPrice { amount } }
+          onlineStoreUrl
+          productType
+        }}
+      }
+    }`;
+  const q = `product_type:${category} AND variants.price:>=${minPrice} AND variants.price:<=${maxPrice}`;
+  const res = await fetch("https://YOUR-STORE.myshopify.com/api/2024-10/graphql.json", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Shopify-Storefront-Access-Token": "YOUR-STOREFRONT-TOKEN"
+    },
+    body: JSON.stringify({ query, variables: { q } })
+  });
+  const data = await res.json();
+  return data.data.products.edges.map(e => ({
+    id: e.node.id,
+    name: e.node.title,
+    price: Number(e.node.priceRange.minVariantPrice.amount),
+    url: e.node.onlineStoreUrl,
+    category: e.node.productType,
+    stock: "In stock"
+  }));
+  */
+}
+
+/* ============================================================
+   3. CONVERSATION ENGINE
+   ============================================================ */
+
+const chatEl = document.getElementById('chat');
+const textInput = document.getElementById('textInput');
+const sendBtn = document.getElementById('sendBtn');
+
+let intent = { category: null, minPrice: null, maxPrice: null, priceLabel: null };
+let stage = "category"; // category -> price -> results -> done
+
+function addBotBubble(html){
+  const row = document.createElement('div');
+  row.className = 'row bot';
+  row.innerHTML = `<div class="bubble bot">${html}</div>`;
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function addUserBubble(text){
+  const row = document.createElement('div');
+  row.className = 'row user';
+  row.innerHTML = `<div class="bubble user"></div>`;
+  row.querySelector('.bubble').textContent = text;
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function addChips(options, onPick){
+  const row = document.createElement('div');
+  row.className = 'row bot';
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble bot';
+  const chips = document.createElement('div');
+  chips.className = 'chips';
+  options.forEach(opt => {
+    const c = document.createElement('div');
+    c.className = 'chip';
+    c.textContent = opt;
+    c.onclick = () => { onPick(opt); chips.querySelectorAll('.chip').forEach(x=>x.style.pointerEvents='none'); chips.style.opacity=0.55; };
+    chips.appendChild(c);
+  });
+  wrap.appendChild(chips);
+  row.appendChild(wrap);
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function renderResults(products){
+  const row = document.createElement('div');
+  row.className = 'row bot';
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble bot';
+  wrap.style.maxWidth = '100%';
+
+  if(products.length === 0){
+    wrap.innerHTML = `<p class="empty-note">No matches in that bracket — want to try a wider price range or a different category?</p>`;
+  } else {
+    const grid = document.createElement('div');
+    grid.className = 'results';
+    products.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'pcard';
+      card.innerHTML = `
+        <div class="pcat">${p.category}</div>
+        <div class="pname">${p.name}</div>
+        <div class="pmeta">Item #${p.id}</div>
+        <div class="price-row">
+          <span class="price">Rs ${p.price.toLocaleString()}</span>
+          <span class="stock">${p.stock}</span>
+        </div>
+        <a class="buy-link" href="${p.url}" target="_blank" rel="noopener">View &amp; Buy</a>
+      `;
+      grid.appendChild(card);
+    });
+    wrap.appendChild(grid);
+  }
+  row.appendChild(wrap);
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function matchCategoryFromText(text){
+  const t = text.toLowerCase();
+  for(const [cat, words] of Object.entries(CATEGORY_SYNONYMS)){
+    if(words.some(w => t.includes(w))) return cat;
+  }
+  if(t.includes("any") || t.includes("anything")) return "Any";
+  return null;
+}
+
+function matchPriceFromText(text){
+  const t = text.toLowerCase().replace(/,/g,'');
+  if(t.includes("any")) return PRICE_BRACKETS[4];
+  const nums = t.match(/\d+/g);
+  if(nums){
+    const n = Number(nums[0]);
+    return PRICE_BRACKETS.find(b => n >= b.min && n <= b.max) || PRICE_BRACKETS[4];
+  }
+  for(const b of PRICE_BRACKETS){
+    if(t.includes(b.label.toLowerCase().split(' ')[0])) return b;
+  }
+  return null;
+}
+
+async function runResults(){
+  addBotBubble(`Searching <strong>${intent.category === "Any" ? "all categories" : intent.category}</strong> under <strong>${intent.priceLabel}</strong>…`);
+  const products = await fetchCatalog({ category: intent.category, minPrice: intent.minPrice, maxPrice: intent.maxPrice });
+  renderResults(products);
+  addBotBubble("Want to search again?");
+  addChips(["Start over"], () => { resetConversation(); });
+  stage = "done";
+}
+
+function askCategory(){
+  addBotBubble("Hi! I'm BazaarBot. What are you shopping for today?");
+  addChips(["Electronics","Fashion","Home & Kitchen","Books","Beauty","Any category"], (choice) => {
+    intent.category = choice === "Any category" ? "Any" : choice;
+    addUserBubble(choice);
+    askPrice();
+  });
+  stage = "category";
+}
+
+function askPrice(){
+  addBotBubble("Got it. What's your budget?");
+  addChips(PRICE_BRACKETS.map(b=>b.label), (choice) => {
+    const bracket = PRICE_BRACKETS.find(b=>b.label===choice);
+    intent.minPrice = bracket.min;
+    intent.maxPrice = bracket.max;
+    intent.priceLabel = bracket.label;
+    addUserBubble(choice);
+    runResults();
+  });
+  stage = "price";
+}
+
+function resetConversation(){
+  intent = { category: null, minPrice: null, maxPrice: null, priceLabel: null };
+  chatEl.innerHTML = "";
+  askCategory();
+}
+
+function handleFreeText(text){
+  addUserBubble(text);
+  if(stage === "category"){
+    const cat = matchCategoryFromText(text);
+    if(cat){ intent.category = cat; askPrice(); }
+    else addBotBubble("I didn't catch a category there — try one of the buttons above, or type e.g. \"electronics\" or \"fashion\".");
+  } else if(stage === "price"){
+    const bracket = matchPriceFromText(text);
+    if(bracket){
+      intent.minPrice = bracket.min; intent.maxPrice = bracket.max; intent.priceLabel = bracket.label;
+      runResults();
+    } else {
+      addBotBubble("Couldn't read a budget there — pick a bracket above, or type a number like \"5000\".");
+    }
+  } else {
+    addBotBubble("Type \"start over\" or tap the button above to search again.");
+    if(text.toLowerCase().includes("start")) resetConversation();
+  }
+}
+
+sendBtn.onclick = () => {
+  const val = textInput.value.trim();
+  if(!val) return;
+  handleFreeText(val);
+  textInput.value = "";
+};
+textInput.addEventListener('keydown', e => { if(e.key === 'Enter') sendBtn.click(); });
+
+askCategory();
+</script>
+</body>
+</html>
